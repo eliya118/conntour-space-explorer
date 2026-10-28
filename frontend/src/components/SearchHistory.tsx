@@ -11,9 +11,10 @@ interface SearchHistoryProps {
   activeSearchId: number | null;
   onSelect: (search: SearchSummary) => void;
   onDeleted: (searchId: number) => void;
+  onClose: () => void;
 }
 
-const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect, onDeleted }) => {
+const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect, onDeleted, onClose }) => {
   const queryClient = useQueryClient();
   const history = usePagedQuery(queryKeys.searches, fetchSearches);
 
@@ -31,7 +32,19 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect,
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <h2 className="shrink-0 border-b px-4 py-3 text-lg font-semibold">Search history</h2>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
+        <h2 className="text-lg font-semibold">Search history</h2>
+        <button
+          type="button"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+          aria-label="Close search history"
+          onClick={onClose}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 5 7 10l5 5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
       {history.isLoading && (
         <div className="flex flex-1 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-blue-500" />

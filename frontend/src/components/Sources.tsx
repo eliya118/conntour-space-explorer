@@ -56,8 +56,10 @@ const Sources: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Source | null>(null);
   const [filterForm, setFilterForm] = useState<FilterForm>(EMPTY_FILTERS);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const queryRef = useRef(query);
   const submittedRef = useRef<string | null>(null);
+  const historyPanelRef = useRef<HTMLElement>(null);
   queryRef.current = query;
   const appliedFilters = useMemo(() => queryFilters(filterForm), [filterForm]);
   const browseKey = useMemo(() => queryKeys.sources(appliedFilters), [appliedFilters]);
@@ -112,6 +114,13 @@ const Sources: React.FC = () => {
   const total = activeRequest.data?.pages[0]?.total ?? 0;
 
   useEffect(() => {
+    const panel = historyPanelRef.current;
+    if (!panel) return;
+    if (historyOpen) panel.removeAttribute("inert");
+    else panel.setAttribute("inert", "");
+  }, [historyOpen]);
+
+  useEffect(() => {
     const trimmed = query.trim();
     const timer = window.setTimeout(() => {
       if (trimmed.length < MIN_SEARCH_LENGTH) {
@@ -149,11 +158,36 @@ const Sources: React.FC = () => {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100">
       <header className="shrink-0 border-b bg-white px-4 py-4">
-        <div>
-          <h1 className="text-3xl font-bold">NASA Space Images</h1>
-          <p className="text-sm text-gray-500">
-            {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="relative mt-1">
+            <button
+              type="button"
+              className="peer inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:border-gray-300"
+              aria-expanded={historyOpen}
+              aria-controls="search-history"
+              aria-describedby="search-history-tip"
+              aria-label={historyOpen ? "Close search history" : "Open search history"}
+              onClick={() => setHistoryOpen((open) => !open)}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="3" y="3.5" width="14" height="13" rx="1.5" />
+                <path d="M8 3.5v13" />
+              </svg>
+            </button>
+            <span
+              id="search-history-tip"
+              role="tooltip"
+              className="pointer-events-none absolute left-0 top-full z-40 mt-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity peer-hover:opacity-100 peer-focus-visible:opacity-100"
+            >
+              {historyOpen ? "Close search history" : "Open search history"}
+            </span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">NASA Space Images</h1>
+            <p className="text-sm text-gray-500">
+              {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
+            </p>
+          </div>
         </div>
         {notice && <p className="mt-3 text-sm text-red-600">{notice}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -185,17 +219,35 @@ const Sources: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside className="flex h-64 shrink-0 flex-col border-b bg-white lg:h-auto lg:min-h-0 lg:w-80 lg:border-b-0 lg:border-r">
-          <SearchHistory
-            activeSearchId={activeSearchId}
-            onSelect={openHistory}
-            onDeleted={(searchId) => {
-              if (activeSearchId === searchId) {
-                showBrowseAll();
-              }
-            }}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {historyOpen && (
+          <button
+            type="button"
+            className="absolute inset-0 z-20 bg-black/20 lg:hidden"
+            aria-label="Close search history"
+            onClick={() => setHistoryOpen(false)}
           />
+        )}
+        <aside
+          id="search-history"
+          ref={historyPanelRef}
+          aria-hidden={!historyOpen}
+          className={`absolute inset-y-0 left-0 z-30 flex w-80 max-w-[85vw] flex-col overflow-hidden bg-white shadow-lg transition-transform duration-200 ease-out lg:static lg:z-auto lg:max-w-none lg:shadow-none lg:transition-[width] ${
+            historyOpen ? "translate-x-0 border-r lg:w-80" : "-translate-x-full lg:w-0 lg:translate-x-0"
+          }`}
+        >
+          <div className="flex h-full w-80 max-w-[85vw] min-h-0 flex-col lg:w-80 lg:max-w-none">
+            <SearchHistory
+              activeSearchId={activeSearchId}
+              onSelect={openHistory}
+              onDeleted={(searchId) => {
+                if (activeSearchId === searchId) {
+                  showBrowseAll();
+                }
+              }}
+              onClose={() => setHistoryOpen(false)}
+            />
+          </div>
         </aside>
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {activeRequest.isLoading && (
