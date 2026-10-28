@@ -60,12 +60,17 @@ const SearchHistory = memo(function SearchHistory({
           </button>
           <button
             type="button"
-            className="shrink-0 text-sm text-red-600 hover:underline disabled:opacity-50"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
             aria-label={`Delete search ${item.query}`}
             disabled={deletePending && deleteVariables === item.id}
             onClick={() => deleteHistoryItem(item.id)}
           >
-            Delete
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M4.5 6.5h11" strokeLinecap="round" />
+              <path d="M8 6.4V5.2A1.2 1.2 0 0 1 9.2 4h1.6A1.2 1.2 0 0 1 12 5.2v1.2" strokeLinecap="round" />
+              <path d="M6.2 6.5 6.8 15a1 1 0 0 0 1 .9h4.4a1 1 0 0 0 1-.9l.6-8.5" strokeLinejoin="round" />
+              <path d="M8.6 9.2v3.6M11.4 9.2v3.6" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
       );
