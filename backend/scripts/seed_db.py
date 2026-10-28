@@ -12,54 +12,66 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.models import Base, SourceModel
-from db.session import engine, AsyncSessionLocal
+from db.models import SourceModel
+from db.session import AsyncSessionLocal, engine
+
+
+def _recreate_sources(connection) -> None:
+    """Drop and recreate only the sources table so search history survives a reseed."""
+    SourceModel.__table__.drop(connection, checkfirst=True)
+    SourceModel.__table__.create(connection, checkfirst=True)
+
+
+def _keywords(value: object) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return [str(item) for item in value]
 
 
 async def seed_database():
-    """Seed the database with data from mock_data.json."""
-    
-    # Drop and recreate tables for clean schema
+    """Seed sources from mock_data.json without touching search history."""
+
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-    
-    # Load mock data
+        await conn.run_sync(_recreate_sources)
+
     data_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         "data",
-        "mock_data.json"
+        "mock_data.json",
     )
-    
+
     with open(data_path, "r") as f:
         json_data = json.load(f)
-    
-    # Parse and transform the data
+
     sources = []
     items = json_data.get("collection", {}).get("items", [])
-    
+
     for idx, item in enumerate(items, start=1):
         data = item.get("data", [{}])[0]
         links = item.get("links", [])
-        
-        # Find image URL
+
         image_url = None
         for link in links:
             if link.get("render") == "image":
                 image_url = link.get("href")
                 break
-        
-        sources.append(SourceModel(
-            id=idx,
-            name=data.get("title", f"NASA Item {idx}"),
-            type=data.get("media_type", "unknown"),
-            launch_date=data.get("date_created", ""),
-            description=data.get("description", ""),
-            image_url=image_url,
-            status="Active",
-        ))
-    
-    # Insert data
+
+        sources.append(
+            SourceModel(
+                id=idx,
+                name=data.get("title", f"NASA Item {idx}"),
+                type=data.get("media_type", "unknown"),
+                launch_date=data.get("date_created", ""),
+                description=data.get("description", ""),
+                image_url=image_url,
+                status="Active",
+                keywords=_keywords(data.get("keywords")),
+                nasa_id=data.get("nasa_id"),
+            )
+        )
+
     async with AsyncSessionLocal() as session:
         session.add_all(sources)
         await session.commit()
