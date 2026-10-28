@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 
 import { errorMessage, fetchSimilar } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
 import { formatDate } from "../lib/format";
 import { Source } from "../types";
@@ -14,7 +15,9 @@ interface ImageDetailProps {
 }
 
 const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose }) => {
-  const similar = usePagedQuery(["similar", source.id], (offset) => fetchSimilar(source.id, offset));
+  const similar = usePagedQuery(queryKeys.similar(source.id), (offset) =>
+    fetchSimilar(source.id, offset),
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

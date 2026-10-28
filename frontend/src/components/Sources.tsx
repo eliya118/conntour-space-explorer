@@ -2,6 +2,7 @@ import { InfiniteData, useMutation, useQueryClient } from "@tanstack/react-query
 import React, { useState } from "react";
 
 import { createSearch, errorMessage, fetchSearch, fetchSources } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
 import { SearchResults, SearchSummary, Source } from "../types";
 import ImageCard from "./ImageCard";
@@ -22,12 +23,12 @@ const Sources: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Source | null>(null);
 
-  const browse = usePagedQuery(["sources"], fetchSources, {
+  const browse = usePagedQuery(queryKeys.sources, fetchSources, {
     enabled: activeSearchId === null,
   });
 
   const results = usePagedQuery(
-    ["search-results", activeSearchId],
+    queryKeys.searchResults(activeSearchId),
     (offset) => fetchSearch(activeSearchId as number, offset),
     { enabled: activeSearchId !== null, staleTime: 30_000 },
   );
@@ -39,8 +40,8 @@ const Sources: React.FC = () => {
         pages: [data],
         pageParams: [0],
       };
-      queryClient.setQueryData(["search-results", data.id], seeded);
-      queryClient.invalidateQueries({ queryKey: ["searches"] });
+      queryClient.setQueryData(queryKeys.searchResults(data.id), seeded);
+      queryClient.invalidateQueries({ queryKey: queryKeys.searches });
       setActiveSearchId(data.id);
       setActiveQuery(data.query);
       setNotice(null);

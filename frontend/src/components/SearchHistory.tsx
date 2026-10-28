@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import { deleteSearch, errorMessage, fetchSearches } from "../api/client";
+import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
 import { SearchSummary } from "../types";
 import VirtualGrid from "./VirtualGrid";
@@ -14,13 +15,13 @@ interface SearchHistoryProps {
 
 const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect, onDeleted }) => {
   const queryClient = useQueryClient();
-  const history = usePagedQuery(["searches"], fetchSearches);
+  const history = usePagedQuery(queryKeys.searches, fetchSearches);
 
   const remove = useMutation({
     mutationFn: deleteSearch,
     onSuccess: (_data, searchId) => {
-      queryClient.invalidateQueries({ queryKey: ["searches"] });
-      queryClient.removeQueries({ queryKey: ["search-results", searchId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.searches });
+      queryClient.removeQueries({ queryKey: queryKeys.searchResults(searchId) });
       onDeleted(searchId);
     },
   });
