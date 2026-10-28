@@ -1,13 +1,8 @@
-import { InfiniteData, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { InfiniteData, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 
-import {
-  createSearch,
-  errorMessage,
-  fetchSearch,
-  fetchSources,
-  nextOffset,
-} from "../api/client";
+import { createSearch, errorMessage, fetchSearch, fetchSources } from "../api/client";
+import { usePagedQuery } from "../api/usePagedQuery";
 import { SearchResults, SearchSummary, Source } from "../types";
 import ImageCard from "./ImageCard";
 import ImageDetail from "./ImageDetail";
@@ -27,22 +22,15 @@ const Sources: React.FC = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Source | null>(null);
 
-  const browse = useInfiniteQuery({
-    queryKey: ["sources"],
-    queryFn: ({ pageParam }) => fetchSources(pageParam),
-    initialPageParam: 0,
-    getNextPageParam: nextOffset,
+  const browse = usePagedQuery(["sources"], fetchSources, {
     enabled: activeSearchId === null,
   });
 
-  const results = useInfiniteQuery({
-    queryKey: ["search-results", activeSearchId],
-    queryFn: ({ pageParam }) => fetchSearch(activeSearchId as number, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: nextOffset,
-    enabled: activeSearchId !== null,
-    staleTime: 30_000,
-  });
+  const results = usePagedQuery(
+    ["search-results", activeSearchId],
+    (offset) => fetchSearch(activeSearchId as number, offset),
+    { enabled: activeSearchId !== null, staleTime: 30_000 },
+  );
 
   const search = useMutation({
     mutationFn: createSearch,

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 
+import { formatDate } from "../lib/format";
 import { Source } from "../types";
 import FullImageModal from "./FullImageModal";
 
@@ -7,17 +8,6 @@ interface ImageCardProps {
   source: Source;
   confidence?: number;
   onOpen: () => void;
-}
-
-function formatDate(value: string): string | null {
-  if (!value) {
-    return null;
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString();
 }
 
 const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => {

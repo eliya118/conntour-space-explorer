@@ -1,7 +1,8 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
 import React, { useEffect } from "react";
 
-import { errorMessage, fetchSimilar, nextOffset } from "../api/client";
+import { errorMessage, fetchSimilar } from "../api/client";
+import { usePagedQuery } from "../api/usePagedQuery";
+import { formatDate } from "../lib/format";
 import { Source } from "../types";
 import ImageCard from "./ImageCard";
 import VirtualGrid from "./VirtualGrid";
@@ -12,24 +13,8 @@ interface ImageDetailProps {
   onClose: () => void;
 }
 
-function formatDate(value: string): string | null {
-  if (!value) {
-    return null;
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleDateString();
-}
-
 const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose }) => {
-  const similar = useInfiniteQuery({
-    queryKey: ["similar", source.id],
-    queryFn: ({ pageParam }) => fetchSimilar(source.id, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: nextOffset,
-  });
+  const similar = usePagedQuery(["similar", source.id], (offset) => fetchSimilar(source.id, offset));
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
