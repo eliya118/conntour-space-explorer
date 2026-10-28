@@ -226,6 +226,19 @@ docker compose exec db psql -U postgres -d space_explorer
 ---
 
 
+## Cool Feature: Similar images
+
+1. **Feature name**: Similar images
+2. **Why this feature**: A search gets you into the collection, but the next interesting image is often one that shares a mission, place, or instrument. Opening an image and seeing related ones, each with a confidence score, lets someone explore without writing another query.
+3. **Implementation details**: Similar images use the same keyword-overlap scorer as search. The query is the open image's title plus its NASA keywords. Each other image earns points when a token appears in its title (weight 3), keywords (weight 2), or description (weight 1). Confidence is those points divided by the maximum title score, so a full title match is 1. The image itself is excluded, and the result is not written to search history. The detail panel shows metadata (`nasa_id`, type, status, date, description, keywords) above a paged, virtualized list of similar images, so only the visible rows are rendered and the next page loads as you reach the end.
+4. **Demo**: Open any image card, then scroll the Similar images list in the panel. A Mars image surfaces other Mars images with a match percentage.
+
+![Search results for images of Mars rovers](docs/search-mars.png)
+
+![Gale Crater detail with similar images](docs/similar-images.png)
+
+Search itself is the same scorer. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
+
 ## Deliverables
 
 - A GitHub repository with your implementation (fork this one if you'd like)
