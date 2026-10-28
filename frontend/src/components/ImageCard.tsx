@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 
 import { Source } from "../types";
+import FullImageModal from "./FullImageModal";
 
 interface ImageCardProps {
   source: Source;
@@ -20,6 +21,7 @@ function formatDate(value: string): string | null {
 }
 
 const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => {
+  const [fullImageOpen, setFullImageOpen] = useState(false);
   const dateLabel = formatDate(source.launch_date);
   const confidenceLabel =
     confidence === undefined ? null : `${Math.round(confidence * 100)}% match`;
@@ -57,18 +59,22 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
         <div className="mt-auto flex flex-wrap gap-2">
           <span className="inline-block rounded bg-blue-500 px-4 py-2 text-white">Details</span>
           {source.image_url && (
-            <a
-              href={source.image_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
               className="inline-block rounded border border-blue-500 px-4 py-2 text-blue-600 hover:bg-blue-50"
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                setFullImageOpen(true);
+              }}
             >
               View Full Image
-            </a>
+            </button>
           )}
         </div>
       </div>
+      {fullImageOpen && source.image_url && (
+        <FullImageModal source={source} onClose={() => setFullImageOpen(false)} />
+      )}
     </article>
   );
 };
