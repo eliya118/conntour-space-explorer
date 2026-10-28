@@ -45,7 +45,9 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
           )}
         </div>
         <p className="mb-2 line-clamp-3 text-gray-600">{source.description}</p>
-        {dateLabel && <p className="mb-4 text-sm text-gray-500">{dateLabel}</p>}
+        {(source.center || dateLabel) && (
+          <p className="mb-4 text-sm text-gray-500">{[source.center, dateLabel].filter(Boolean).join(" · ")}</p>
+        )}
         <div className="mt-auto flex flex-wrap gap-2">
           <span className="inline-block rounded bg-blue-500 px-4 py-2 text-white">Details</span>
           {source.image_url && (

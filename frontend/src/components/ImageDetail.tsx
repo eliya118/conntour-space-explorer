@@ -73,6 +73,12 @@ const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose
               <dt className="text-gray-500">Status</dt>
               <dd>{source.status}</dd>
             </div>
+            {source.center && (
+              <div className="flex gap-2">
+                <dt className="text-gray-500">Center</dt>
+                <dd>{source.center}</dd>
+              </div>
+            )}
             {dateLabel && (
               <div className="flex gap-2">
                 <dt className="text-gray-500">Date</dt>

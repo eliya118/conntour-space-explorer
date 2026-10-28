@@ -1,6 +1,14 @@
 import axios from "axios";
 
-import { Page, ScoredSource, SearchResults, SearchSummary, Source } from "../types";
+import {
+  Page,
+  ScoredSource,
+  SearchResults,
+  SearchSummary,
+  Source,
+  SourceFacets,
+  SourceQueryFilters,
+} from "../types";
 
 export const PAGE_SIZE = 24;
 
@@ -19,10 +27,26 @@ export function errorMessage(error: unknown): string {
   return "Something went wrong. Try again.";
 }
 
-export async function fetchSources(offset: number): Promise<Page<Source>> {
-  const response = await axios.get<Page<Source>>("/api/sources", {
-    params: { limit: PAGE_SIZE, offset },
-  });
+export async function fetchSources(offset: number, filters: SourceQueryFilters = {}): Promise<Page<Source>> {
+  const params: Record<string, string | number> = { limit: PAGE_SIZE, offset };
+  if (filters.dateFrom) {
+    params.date_from = filters.dateFrom;
+  }
+  if (filters.dateTo) {
+    params.date_to = filters.dateTo;
+  }
+  if (filters.center) {
+    params.center = filters.center;
+  }
+  if (filters.keyword) {
+    params.keyword = filters.keyword;
+  }
+  const response = await axios.get<Page<Source>>("/api/sources", { params });
+  return response.data;
+}
+
+export async function fetchSourceFacets(): Promise<SourceFacets> {
+  const response = await axios.get<SourceFacets>("/api/sources/facets");
   return response.data;
 }
 

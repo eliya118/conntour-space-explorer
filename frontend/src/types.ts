@@ -3,11 +3,26 @@ export interface Source {
   name: string;
   description: string;
   launch_date: string;
+  center: string;
   image_url: string | null;
   type: string;
   status: string;
   keywords: string[];
   nasa_id: string | null;
+}
+
+export interface SourceQueryFilters {
+  dateFrom?: string;
+  dateTo?: string;
+  center?: string;
+  keyword?: string;
+}
+
+export interface SourceFacets {
+  centers: string[];
+  keywords: string[];
+  date_min: string | null;
+  date_max: string | null;
 }
 
 export interface Page<T> {

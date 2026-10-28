@@ -10,7 +10,7 @@ interface VirtualGridProps<T> {
   fetchNextPage: () => void;
   columnsMode?: "responsive" | "single";
   estimateSize?: number;
-  resetKey?: string | number | null;
+  resetKey?: string | number | null | readonly unknown[];
   empty?: React.ReactNode;
   footer?: React.ReactNode;
 }

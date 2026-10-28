@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+.browse-calendar {
+  --rdp-accent-color: #111827;
+  --rdp-accent-background-color: #f3f4f6;
+  --rdp-day-height: 34px;
+  --rdp-day-width: 34px;
+  --rdp-day_button-border-radius: 999px;
+  --rdp-selected-border: none;
+} 

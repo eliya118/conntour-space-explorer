@@ -1,10 +1,11 @@
-import { InfiniteData, useMutation, useQueryClient } from "@tanstack/react-query";
-import React, { useState } from "react";
+import { InfiniteData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { createSearch, errorMessage, fetchSearch, fetchSources } from "../api/client";
+import { createSearch, errorMessage, fetchSearch, fetchSourceFacets, fetchSources } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
-import { SearchResults, SearchSummary, Source } from "../types";
+import { SearchResults, SearchSummary, Source, SourceQueryFilters } from "../types";
+import BrowseFilters from "./BrowseFilters";
 import ImageCard from "./ImageCard";
 import ImageDetail from "./ImageDetail";
 import SearchHistory from "./SearchHistory";
@@ -15,6 +16,36 @@ interface CardItem {
   confidence?: number;
 }
 
+interface FilterForm {
+  dateFrom: string;
+  dateTo: string;
+  center: string;
+  keyword: string;
+}
+
+const EMPTY_FILTERS: FilterForm = { dateFrom: "", dateTo: "", center: "", keyword: "" };
+const MIN_SEARCH_LENGTH = 3;
+
+function queryFilters(form: FilterForm): SourceQueryFilters {
+  const filters: SourceQueryFilters = {};
+  if (form.dateFrom && form.dateTo && form.dateFrom > form.dateTo) {
+    return filters;
+  }
+  if (form.dateFrom) {
+    filters.dateFrom = form.dateFrom;
+  }
+  if (form.dateTo) {
+    filters.dateTo = form.dateTo;
+  }
+  if (form.center) {
+    filters.center = form.center;
+  }
+  if (form.keyword) {
+    filters.keyword = form.keyword;
+  }
+  return filters;
+}
+
 const Sources: React.FC = () => {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -22,8 +53,18 @@ const Sources: React.FC = () => {
   const [activeQuery, setActiveQuery] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Source | null>(null);
+  const [filterForm, setFilterForm] = useState<FilterForm>(EMPTY_FILTERS);
+  const queryRef = useRef(query);
+  const submittedRef = useRef<string | null>(null);
+  queryRef.current = query;
+  const appliedFilters = useMemo(() => queryFilters(filterForm), [filterForm]);
+  const browseKey = useMemo(() => queryKeys.sources(appliedFilters), [appliedFilters]);
+  const facets = useQuery({
+    queryKey: queryKeys.sourceFacets,
+    queryFn: fetchSourceFacets,
+  });
 
-  const browse = usePagedQuery(queryKeys.sources, fetchSources, {
+  const browse = usePagedQuery(browseKey, (offset) => fetchSources(offset, appliedFilters), {
     enabled: activeSearchId === null,
   });
 
@@ -36,23 +77,28 @@ const Sources: React.FC = () => {
   const search = useMutation({
     mutationFn: createSearch,
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.searches });
+      if (data.query !== queryRef.current.trim()) {
+        return;
+      }
       const seeded: InfiniteData<SearchResults> = {
         pages: [data],
         pageParams: [0],
       };
       queryClient.setQueryData(queryKeys.searchResults(data.id), seeded);
-      queryClient.invalidateQueries({ queryKey: queryKeys.searches });
       setActiveSearchId(data.id);
       setActiveQuery(data.query);
       setNotice(null);
     },
-    onError: (error) => {
+    onError: (error, failedQuery) => {
+      submittedRef.current = failedQuery;
       setActiveSearchId(null);
       setActiveQuery(null);
       setNotice(errorMessage(error));
     },
   });
 
+  const { mutate: submitSearch } = search;
   const showBrowse = activeSearchId === null;
   const activeRequest = showBrowse ? browse : results;
   const cards: CardItem[] = showBrowse
@@ -63,25 +109,35 @@ const Sources: React.FC = () => {
       }));
   const total = activeRequest.data?.pages[0]?.total ?? 0;
 
-  const submitSearch = (event: React.FormEvent) => {
-    event.preventDefault();
+  useEffect(() => {
     const trimmed = query.trim();
-    if (!trimmed) {
-      setActiveSearchId(null);
-      setActiveQuery(null);
-      setNotice(null);
-      return;
-    }
-    search.mutate(trimmed);
-  };
+    const timer = window.setTimeout(() => {
+      if (trimmed.length < MIN_SEARCH_LENGTH) {
+        submittedRef.current = null;
+        setActiveSearchId(null);
+        setActiveQuery(null);
+        setNotice(null);
+        return;
+      }
+      if (trimmed === submittedRef.current || trimmed === activeQuery) {
+        return;
+      }
+      submittedRef.current = trimmed;
+      submitSearch(trimmed);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [query, activeQuery, submitSearch]);
 
   const showBrowseAll = () => {
+    submittedRef.current = null;
+    setQuery("");
     setActiveSearchId(null);
     setActiveQuery(null);
     setNotice(null);
   };
 
   const openHistory = (item: SearchSummary) => {
+    submittedRef.current = item.query;
     setActiveSearchId(item.id);
     setActiveQuery(item.query);
     setQuery(item.query);
@@ -91,40 +147,38 @@ const Sources: React.FC = () => {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100">
       <header className="shrink-0 border-b bg-white px-4 py-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">NASA Space Images</h1>
-            <p className="text-sm text-gray-500">
-              {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
-            </p>
-          </div>
-          <form className="flex w-full flex-col gap-2 sm:flex-row lg:max-w-xl" onSubmit={submitSearch}>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder='Try "images of Mars rovers"'
-              aria-label="Search images"
-              className="w-full rounded border border-gray-300 px-3 py-2"
-            />
-            <button
-              type="submit"
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-              disabled={search.isPending}
-            >
-              {search.isPending ? "Searching..." : "Search"}
-            </button>
-            {!showBrowse && (
-              <button
-                type="button"
-                className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
-                onClick={showBrowseAll}
-              >
-                Browse all
-              </button>
-            )}
-          </form>
+        <div>
+          <h1 className="text-3xl font-bold">NASA Space Images</h1>
+          <p className="text-sm text-gray-500">
+            {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
+          </p>
         </div>
         {notice && <p className="mt-3 text-sm text-red-600">{notice}</p>}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search images"
+            aria-label="Search images"
+            className="h-9 w-56 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900"
+          />
+          {showBrowse && (
+            <BrowseFilters
+              dateFrom={filterForm.dateFrom}
+              dateTo={filterForm.dateTo}
+              center={filterForm.center}
+              keyword={filterForm.keyword}
+              centers={facets.data?.centers ?? []}
+              keywords={facets.data?.keywords ?? []}
+              dateMin={facets.data?.date_min ?? null}
+              dateMax={facets.data?.date_max ?? null}
+              onDateChange={(dateFrom, dateTo) => setFilterForm((current) => ({ ...current, dateFrom, dateTo }))}
+              onCenterChange={(center) => setFilterForm((current) => ({ ...current, center }))}
+              onKeywordChange={(keyword) => setFilterForm((current) => ({ ...current, keyword }))}
+              onClear={() => setFilterForm(EMPTY_FILTERS)}
+            />
+          )}
+        </div>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
@@ -152,13 +206,19 @@ const Sources: React.FC = () => {
             <VirtualGrid
               items={cards}
               getKey={(item) => item.source.id}
-              resetKey={activeSearchId ?? "browse"}
+              resetKey={showBrowse ? browseKey : activeSearchId}
               hasNextPage={activeRequest.hasNextPage}
               isFetchingNextPage={activeRequest.isFetchingNextPage}
               fetchNextPage={() => {
                 activeRequest.fetchNextPage();
               }}
-              empty={showBrowse ? "No images are available." : "No images matched that search."}
+              empty={
+                showBrowse
+                  ? Object.keys(appliedFilters).length > 0
+                    ? "No images match these filters."
+                    : "No images are available."
+                  : "No images matched that search."
+              }
               footer={
                 activeRequest.isFetchingNextPage
                   ? "Loading more..."
