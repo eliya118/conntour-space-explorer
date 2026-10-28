@@ -1,8 +1,9 @@
 from collections import Counter
+from collections.abc import Sequence
 from datetime import date, timedelta
 from typing import List
 
-from sqlalchemy import cast, func, select
+from sqlalchemy import and_, cast, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,10 +36,11 @@ class SourceRepository(Repository[Source]):
         date_from: date | None = None,
         date_to: date | None = None,
         center: str | None = None,
-        keyword: str | None = None,
+        keyword: Sequence[str] | None = None,
+        keyword_match: str = "or",
     ) -> tuple[list[Source], int]:
         """Return one page of sources ordered by id, plus the filtered total."""
-        conditions = _source_conditions(date_from, date_to, center, keyword)
+        conditions = _source_conditions(date_from, date_to, center, keyword, keyword_match)
         count_stmt = select(func.count()).select_from(SourceModel)
         page_stmt = select(SourceModel).order_by(SourceModel.id)
         if conditions:
@@ -99,7 +101,8 @@ def _source_conditions(
     date_from: date | None,
     date_to: date | None,
     center: str | None,
-    keyword: str | None,
+    keyword: Sequence[str] | None,
+    keyword_match: str,
 ) -> list:
     conditions = []
     if center:
@@ -108,6 +111,9 @@ def _source_conditions(
         conditions.append(SourceModel.launch_date >= date_from.isoformat())
     if date_to is not None:
         conditions.append(SourceModel.launch_date < (date_to + timedelta(days=1)).isoformat())
-    if keyword:
-        conditions.append(cast(SourceModel.keywords, JSONB).contains([keyword]))
+    names = [name for name in (keyword or []) if name]
+    if names:
+        clauses = [cast(SourceModel.keywords, JSONB).contains([name]) for name in names]
+        combine = and_ if keyword_match == "and" else or_
+        conditions.append(combine(*clauses))
     return conditions

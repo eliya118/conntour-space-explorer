@@ -11,11 +11,14 @@ export interface Source {
   nasa_id: string | null;
 }
 
+export type KeywordMatch = "and" | "or";
+
 export interface SourceQueryFilters {
   dateFrom?: string;
   dateTo?: string;
   center?: string;
-  keyword?: string;
+  keywords?: string[];
+  keywordMatch?: KeywordMatch;
 }
 
 export interface SourceFacets {

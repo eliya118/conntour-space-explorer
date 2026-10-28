@@ -29,7 +29,8 @@ async def get_sources(
         date_from=filters.date_from,
         date_to=filters.date_to,
         center=filters.center,
-        keyword=filters.keyword,
+        keyword=filters.keywords,
+        keyword_match=filters.keyword_match,
     )
     return Page(items=items, total=total, limit=page.limit, offset=page.offset)
 

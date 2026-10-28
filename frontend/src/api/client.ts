@@ -28,7 +28,7 @@ export function errorMessage(error: unknown): string {
 }
 
 export async function fetchSources(offset: number, filters: SourceQueryFilters = {}): Promise<Page<Source>> {
-  const params: Record<string, string | number> = { limit: PAGE_SIZE, offset };
+  const params: Record<string, string | number | string[]> = { limit: PAGE_SIZE, offset };
   if (filters.dateFrom) {
     params.date_from = filters.dateFrom;
   }
@@ -38,10 +38,14 @@ export async function fetchSources(offset: number, filters: SourceQueryFilters =
   if (filters.center) {
     params.center = filters.center;
   }
-  if (filters.keyword) {
-    params.keyword = filters.keyword;
+  if (filters.keywords && filters.keywords.length > 0) {
+    params.keyword = filters.keywords;
+    params.keyword_match = filters.keywordMatch ?? "or";
   }
-  const response = await axios.get<Page<Source>>("/api/sources", { params });
+  const response = await axios.get<Page<Source>>("/api/sources", {
+    params,
+    paramsSerializer: { indexes: null },
+  });
   return response.data;
 }
 

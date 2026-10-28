@@ -2,20 +2,24 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DateRange, DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 
+import { KeywordMatch } from "../types";
+
 const KEYWORD_PAGE_SIZE = 8;
 
 interface BrowseFiltersProps {
   dateFrom: string;
   dateTo: string;
   center: string;
-  keyword: string;
+  selectedKeywords: string[];
+  keywordMatch: KeywordMatch;
   centers: string[];
   keywords: string[];
   dateMin: string | null;
   dateMax: string | null;
   onDateChange: (dateFrom: string, dateTo: string) => void;
   onCenterChange: (value: string) => void;
-  onKeywordChange: (value: string) => void;
+  onKeywordChange: (values: string[]) => void;
+  onKeywordMatchChange: (match: KeywordMatch) => void;
   onClear: () => void;
 }
 
@@ -74,6 +78,10 @@ interface FilterMenuProps {
   label: string;
   emptyLabel: string;
   value: string;
+  values?: string[];
+  multiple?: boolean;
+  match?: KeywordMatch;
+  onMatchChange?: (match: KeywordMatch) => void;
   options: string[];
   open: boolean;
   searchable?: boolean;
@@ -87,6 +95,10 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
   label,
   emptyLabel,
   value,
+  values = [],
+  multiple = false,
+  match,
+  onMatchChange,
   options,
   open,
   searchable = false,
@@ -109,6 +121,8 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
   }, [options, query]);
   const shown = pageSize ? visible.slice(0, loaded) : visible;
   const hasMore = shown.length < visible.length;
+  const selectedValues = multiple ? values : value ? [value] : [];
+  const summary = selectedValues.length > 0 ? selectedValues.join(", ") : emptyLabel;
 
   useEffect(() => {
     if (!open) {
@@ -153,7 +167,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
         aria-controls={open ? listId : undefined}
         onClick={onToggle}
       >
-        <span className={`truncate ${value ? "text-gray-900" : "text-gray-500"}`}>{value || emptyLabel}</span>
+        <span className={`truncate ${selectedValues.length > 0 ? "text-gray-900" : "text-gray-500"}`}>{summary}</span>
         <Chevron open={open} />
       </button>
       {open && (
@@ -162,6 +176,26 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
             wide ? "w-80" : "w-64"
           }`}
         >
+          {match && onMatchChange && (
+            <div className="border-b border-gray-100 px-3 py-2">
+              <div className="grid grid-cols-2 rounded-full bg-gray-100 p-0.5" role="group" aria-label="Match keywords">
+                {(["or", "and"] as const).map((option) => {
+                  const pressed = match === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={pressed}
+                      className={`rounded-full py-1 text-sm ${pressed ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}
+                      onClick={() => onMatchChange(option)}
+                    >
+                      {option === "or" ? "Or" : "And"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {searchable && (
             <div className="border-b border-gray-100 px-3 py-2">
               <input
@@ -179,13 +213,14 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
             id={listId}
             role="listbox"
             aria-label={label}
+            aria-multiselectable={multiple || undefined}
             className="max-h-64 overflow-auto py-1"
           >
             <li role="presentation">
               <button
                 type="button"
                 role="option"
-                aria-selected={value === ""}
+                aria-selected={selectedValues.length === 0}
                 className="flex w-full items-center px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
                 onClick={() => onSelect("")}
               >
@@ -193,7 +228,7 @@ const FilterMenu: React.FC<FilterMenuProps> = ({
               </button>
             </li>
             {shown.map((option) => {
-              const selected = option === value;
+              const selected = selectedValues.includes(option);
               return (
                 <li key={option} role="presentation">
                   <button
@@ -229,7 +264,8 @@ const BrowseFilters: React.FC<BrowseFiltersProps> = ({
   dateFrom,
   dateTo,
   center,
-  keyword,
+  selectedKeywords,
+  keywordMatch,
   centers,
   keywords,
   dateMin,
@@ -237,11 +273,12 @@ const BrowseFilters: React.FC<BrowseFiltersProps> = ({
   onDateChange,
   onCenterChange,
   onKeywordChange,
+  onKeywordMatchChange,
   onClear,
 }) => {
   const [panel, setPanel] = useState<Panel | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const canClear = Boolean(dateFrom || dateTo || center || keyword);
+  const canClear = Boolean(dateFrom || dateTo || center || selectedKeywords.length > 0);
   const selected: DateRange | undefined = dateFrom
     ? { from: parseISODate(dateFrom), to: dateTo ? parseISODate(dateTo) : undefined }
     : undefined;
@@ -321,7 +358,11 @@ const BrowseFilters: React.FC<BrowseFiltersProps> = ({
       <FilterMenu
         label="Keyword"
         emptyLabel="All keywords"
-        value={keyword}
+        value=""
+        values={selectedKeywords}
+        multiple
+        match={keywordMatch}
+        onMatchChange={onKeywordMatchChange}
         options={keywords}
         searchable
         pageSize={KEYWORD_PAGE_SIZE}
@@ -329,8 +370,15 @@ const BrowseFilters: React.FC<BrowseFiltersProps> = ({
         open={panel === "keyword"}
         onToggle={() => toggle("keyword")}
         onSelect={(value) => {
-          onKeywordChange(value);
-          setPanel(null);
+          if (!value) {
+            onKeywordChange([]);
+            return;
+          }
+          onKeywordChange(
+            selectedKeywords.includes(value)
+              ? selectedKeywords.filter((item) => item !== value)
+              : [...selectedKeywords, value]
+          );
         }}
       />
       <button

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createSearch, errorMessage, fetchSearch, fetchSourceFacets, fetchSources } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
-import { SearchResults, SearchSummary, Source, SourceQueryFilters } from "../types";
+import { KeywordMatch, SearchResults, SearchSummary, Source, SourceQueryFilters } from "../types";
 import BrowseFilters from "./BrowseFilters";
 import ImageCard from "./ImageCard";
 import ImageDetail from "./ImageDetail";
@@ -20,10 +20,11 @@ interface FilterForm {
   dateFrom: string;
   dateTo: string;
   center: string;
-  keyword: string;
+  keywords: string[];
+  keywordMatch: KeywordMatch;
 }
 
-const EMPTY_FILTERS: FilterForm = { dateFrom: "", dateTo: "", center: "", keyword: "" };
+const EMPTY_FILTERS: FilterForm = { dateFrom: "", dateTo: "", center: "", keywords: [], keywordMatch: "or" };
 const MIN_SEARCH_LENGTH = 3;
 
 function queryFilters(form: FilterForm): SourceQueryFilters {
@@ -40,8 +41,9 @@ function queryFilters(form: FilterForm): SourceQueryFilters {
   if (form.center) {
     filters.center = form.center;
   }
-  if (form.keyword) {
-    filters.keyword = form.keyword;
+  if (form.keywords.length > 0) {
+    filters.keywords = [...form.keywords].sort((left, right) => left.localeCompare(right));
+    filters.keywordMatch = form.keywordMatch;
   }
   return filters;
 }
@@ -167,14 +169,16 @@ const Sources: React.FC = () => {
               dateFrom={filterForm.dateFrom}
               dateTo={filterForm.dateTo}
               center={filterForm.center}
-              keyword={filterForm.keyword}
+              selectedKeywords={filterForm.keywords}
+              keywordMatch={filterForm.keywordMatch}
               centers={facets.data?.centers ?? []}
               keywords={facets.data?.keywords ?? []}
               dateMin={facets.data?.date_min ?? null}
               dateMax={facets.data?.date_max ?? null}
               onDateChange={(dateFrom, dateTo) => setFilterForm((current) => ({ ...current, dateFrom, dateTo }))}
               onCenterChange={(center) => setFilterForm((current) => ({ ...current, center }))}
-              onKeywordChange={(keyword) => setFilterForm((current) => ({ ...current, keyword }))}
+              onKeywordChange={(keywords) => setFilterForm((current) => ({ ...current, keywords }))}
+              onKeywordMatchChange={(keywordMatch) => setFilterForm((current) => ({ ...current, keywordMatch }))}
               onClear={() => setFilterForm(EMPTY_FILTERS)}
             />
           )}

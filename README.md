@@ -228,7 +228,7 @@ docker compose exec db psql -U postgres -d space_explorer
 
 ## Filtering
 
-The browse catalog can be narrowed by a date range, NASA center, and keyword. Dates are chosen on a calendar, and both ends are inclusive. Center is chosen from the centers in the collection. The keyword menu lists every keyword in the collection and loads the next page as you scroll, and a keyword matches only images that include that exact keyword. Clear filters resets the row. Filters do not change search results, similar images, or saved history. The list stays paged, and the total is the number of images that match.
+The browse catalog can be narrowed by a date range, NASA center, and keyword. Dates are chosen on a calendar, and both ends are inclusive. Center is chosen from the centers in the collection. The keyword menu lists every keyword in the collection, loads the next page as you scroll, and can select more than one keyword. Or matches images that include any selected keyword. And matches images that include every selected keyword. Clear filters resets the row. Filters do not change search results, similar images, or saved history. The list stays paged, and the total is the number of images that match.
 
 ## Cool Feature: Similar images
 
