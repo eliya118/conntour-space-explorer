@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 
 import { formatDate } from "../lib/format";
 import { Source } from "../types";
@@ -7,10 +7,10 @@ import FullImageModal from "./FullImageModal";
 interface ImageCardProps {
   source: Source;
   confidence?: number;
-  onOpen: () => void;
+  onOpen: (source: Source) => void;
 }
 
-const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => {
+const ImageCard = memo(function ImageCard({ source, confidence, onOpen }: ImageCardProps) {
   const [fullImageOpen, setFullImageOpen] = useState(false);
   const dateLabel = formatDate(source.launch_date);
   const confidenceLabel =
@@ -21,14 +21,14 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
       className="flex h-full cursor-pointer flex-col overflow-hidden rounded-lg bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       role="button"
       tabIndex={0}
-      onClick={onOpen}
+      onClick={() => onOpen(source)}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) {
           return;
         }
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onOpen();
+          onOpen(source);
         }
       }}
     >
@@ -54,7 +54,7 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
             className="inline-flex h-7 items-center rounded-md bg-gray-900 px-2.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-gray-700"
             onClick={(event) => {
               event.stopPropagation();
-              onOpen();
+              onOpen(source);
             }}
           >
             Details
@@ -78,6 +78,6 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
       )}
     </article>
   );
-};
+});
 
 export default ImageCard;

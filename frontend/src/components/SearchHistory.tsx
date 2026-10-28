@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import React from "react";
+import React, { memo, useCallback, useMemo } from "react";
 
 import { deleteSearch, errorMessage, fetchSearches } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
@@ -14,7 +14,12 @@ interface SearchHistoryProps {
   onClose: () => void;
 }
 
-const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect, onDeleted, onClose }) => {
+const SearchHistory = memo(function SearchHistory({
+  activeSearchId,
+  onSelect,
+  onDeleted,
+  onClose,
+}: SearchHistoryProps) {
   const queryClient = useQueryClient();
   const history = usePagedQuery(queryKeys.searches, fetchSearches);
 
@@ -26,9 +31,47 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect,
       onDeleted(searchId);
     },
   });
+  const { fetchNextPage: fetchHistoryPage } = history;
+  const { mutate: deleteHistoryItem, isPending: deletePending, variables: deleteVariables } = remove;
 
-  const items = history.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = useMemo(
+    () => history.data?.pages.flatMap((page) => page.items) ?? [],
+    [history.data],
+  );
   const total = history.data?.pages[0]?.total ?? 0;
+  const getHistoryKey = useCallback((item: SearchSummary) => item.id, []);
+  const fetchHistoryNext = useCallback(() => {
+    fetchHistoryPage();
+  }, [fetchHistoryPage]);
+  const renderHistoryItem = useCallback(
+    (item: SearchSummary) => {
+      const selected = item.id === activeSearchId;
+      return (
+        <div
+          className={`flex items-start gap-2 rounded border px-3 py-2 ${
+            selected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"
+          }`}
+        >
+          <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onSelect(item)}>
+            <span className="block truncate font-medium">{item.query}</span>
+            <span className="block text-xs text-gray-500">
+              {item.result_count} results · {new Date(item.created_at).toLocaleString()}
+            </span>
+          </button>
+          <button
+            type="button"
+            className="shrink-0 text-sm text-red-600 hover:underline disabled:opacity-50"
+            aria-label={`Delete search ${item.query}`}
+            disabled={deletePending && deleteVariables === item.id}
+            onClick={() => deleteHistoryItem(item.id)}
+          >
+            Delete
+          </button>
+        </div>
+      );
+    },
+    [activeSearchId, onSelect, deletePending, deleteVariables, deleteHistoryItem],
+  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -55,52 +98,21 @@ const SearchHistory: React.FC<SearchHistoryProps> = ({ activeSearchId, onSelect,
       {history.isSuccess && (
         <VirtualGrid
           items={items}
-          getKey={(item) => item.id}
+          getKey={getHistoryKey}
           columnsMode="single"
           estimateSize={88}
           hasNextPage={history.hasNextPage}
           isFetchingNextPage={history.isFetchingNextPage}
-          fetchNextPage={() => {
-            history.fetchNextPage();
-          }}
+          fetchNextPage={fetchHistoryNext}
           empty="Searches you run will show up here."
           footer={
             history.isFetchingNextPage ? "Loading more..." : items.length > 0 ? `${items.length} of ${total}` : null
           }
-          renderItem={(item) => {
-            const selected = item.id === activeSearchId;
-            return (
-              <div
-                className={`flex items-start gap-2 rounded border px-3 py-2 ${
-                  selected ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"
-                }`}
-              >
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 text-left"
-                  onClick={() => onSelect(item)}
-                >
-                  <span className="block truncate font-medium">{item.query}</span>
-                  <span className="block text-xs text-gray-500">
-                    {item.result_count} results · {new Date(item.created_at).toLocaleString()}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="shrink-0 text-sm text-red-600 hover:underline disabled:opacity-50"
-                  aria-label={`Delete search ${item.query}`}
-                  disabled={remove.isPending && remove.variables === item.id}
-                  onClick={() => remove.mutate(item.id)}
-                >
-                  Delete
-                </button>
-              </div>
-            );
-          }}
+          renderItem={renderHistoryItem}
         />
       )}
     </div>
   );
-};
+});
 
 export default SearchHistory;

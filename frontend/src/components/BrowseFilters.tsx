@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { DateRange, DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 
@@ -396,4 +396,4 @@ const BrowseFilters: React.FC<BrowseFiltersProps> = ({
   );
 };
 
-export default BrowseFilters;
+export default memo(BrowseFilters);

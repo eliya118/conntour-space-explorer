@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import React, { useEffect, useRef, useState } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 
 interface VirtualGridProps<T> {
   items: T[];
@@ -126,4 +126,4 @@ function VirtualGrid<T>({
   );
 }
 
-export default VirtualGrid;
+export default memo(VirtualGrid) as typeof VirtualGrid;

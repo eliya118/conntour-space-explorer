@@ -1,10 +1,10 @@
-import React, { useEffect } from "react";
+import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import { errorMessage, fetchSimilar } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
 import { formatDate } from "../lib/format";
-import { Source } from "../types";
+import { ScoredSource, Source } from "../types";
 import ImageCard from "./ImageCard";
 import VirtualGrid from "./VirtualGrid";
 
@@ -14,10 +14,11 @@ interface ImageDetailProps {
   onClose: () => void;
 }
 
-const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose }) => {
+const ImageDetail = memo(function ImageDetail({ source, onOpenSource, onClose }: ImageDetailProps) {
   const similar = usePagedQuery(queryKeys.similar(source.id), (offset) =>
     fetchSimilar(source.id, offset),
   );
+  const { fetchNextPage: fetchSimilarPage } = similar;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -29,8 +30,21 @@ const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const items = similar.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = useMemo(
+    () => similar.data?.pages.flatMap((page) => page.items) ?? [],
+    [similar.data],
+  );
   const total = similar.data?.pages[0]?.total ?? 0;
+  const getSimilarKey = useCallback((item: ScoredSource) => item.source.id, []);
+  const fetchSimilarNext = useCallback(() => {
+    fetchSimilarPage();
+  }, [fetchSimilarPage]);
+  const renderSimilar = useCallback(
+    (item: ScoredSource) => (
+      <ImageCard source={item.source} confidence={item.confidence} onOpen={onOpenSource} />
+    ),
+    [onOpenSource],
+  );
   const dateLabel = formatDate(source.launch_date);
 
   return (
@@ -111,34 +125,26 @@ const ImageDetail: React.FC<ImageDetailProps> = ({ source, onOpenSource, onClose
           {similar.isSuccess && (
             <VirtualGrid
               items={items}
-              getKey={(item) => item.source.id}
+              getKey={getSimilarKey}
               columnsMode="single"
               estimateSize={360}
               resetKey={source.id}
               hasNextPage={similar.hasNextPage}
               isFetchingNextPage={similar.isFetchingNextPage}
-              fetchNextPage={() => {
-                similar.fetchNextPage();
-              }}
+              fetchNextPage={fetchSimilarNext}
               empty="No similar images share keywords with this one."
               footer={
                 similar.isFetchingNextPage
                   ? "Loading more..."
                   : `Showing ${items.length} of ${total}`
               }
-              renderItem={(item) => (
-                <ImageCard
-                  source={item.source}
-                  confidence={item.confidence}
-                  onOpen={() => onOpenSource(item.source)}
-                />
-              )}
+              renderItem={renderSimilar}
             />
           )}
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default ImageDetail;

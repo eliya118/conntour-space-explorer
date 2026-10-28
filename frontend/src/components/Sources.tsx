@@ -1,5 +1,5 @@
 import { InfiniteData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createSearch, errorMessage, fetchSearch, fetchSourceFacets, fetchSources } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
@@ -25,6 +25,7 @@ interface FilterForm {
 }
 
 const EMPTY_FILTERS: FilterForm = { dateFrom: "", dateTo: "", center: "", keywords: [], keywordMatch: "or" };
+const EMPTY_STRINGS: string[] = [];
 const MIN_SEARCH_LENGTH = 3;
 
 function queryFilters(form: FilterForm): SourceQueryFilters {
@@ -103,15 +104,22 @@ const Sources: React.FC = () => {
   });
 
   const { mutate: submitSearch } = search;
+  const { fetchNextPage: fetchBrowseNext } = browse;
+  const { fetchNextPage: fetchResultsNext } = results;
   const showBrowse = activeSearchId === null;
   const activeRequest = showBrowse ? browse : results;
-  const cards: CardItem[] = showBrowse
-    ? (browse.data?.pages.flatMap((page) => page.items) ?? []).map((source) => ({ source }))
-    : (results.data?.pages.flatMap((page) => page.items) ?? []).map((item) => ({
-        source: item.source,
-        confidence: item.confidence,
-      }));
+  const cards = useMemo<CardItem[]>(() => {
+    if (showBrowse) {
+      return (browse.data?.pages.flatMap((page) => page.items) ?? []).map((source) => ({ source }));
+    }
+    return (results.data?.pages.flatMap((page) => page.items) ?? []).map((item) => ({
+      source: item.source,
+      confidence: item.confidence,
+    }));
+  }, [showBrowse, browse.data, results.data]);
   const total = activeRequest.data?.pages[0]?.total ?? 0;
+  const facetCenters = facets.data?.centers ?? EMPTY_STRINGS;
+  const facetKeywords = facets.data?.keywords ?? EMPTY_STRINGS;
 
   useEffect(() => {
     const panel = historyPanelRef.current;
@@ -139,21 +147,62 @@ const Sources: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [query, activeQuery, submitSearch]);
 
-  const showBrowseAll = () => {
+  const showBrowseAll = useCallback(() => {
     submittedRef.current = null;
     setQuery("");
     setActiveSearchId(null);
     setActiveQuery(null);
     setNotice(null);
-  };
+  }, []);
 
-  const openHistory = (item: SearchSummary) => {
+  const openHistory = useCallback((item: SearchSummary) => {
     submittedRef.current = item.query;
     setActiveSearchId(item.id);
     setActiveQuery(item.query);
     setQuery(item.query);
     setNotice(null);
-  };
+  }, []);
+
+  const closeHistory = useCallback(() => setHistoryOpen(false), []);
+  const closeDetail = useCallback(() => setSelected(null), []);
+
+  const handleHistoryDeleted = useCallback(
+    (searchId: number) => {
+      if (activeSearchId === searchId) {
+        showBrowseAll();
+      }
+    },
+    [activeSearchId, showBrowseAll],
+  );
+
+  const onDateChange = useCallback((dateFrom: string, dateTo: string) => {
+    setFilterForm((current) => ({ ...current, dateFrom, dateTo }));
+  }, []);
+  const onCenterChange = useCallback((center: string) => {
+    setFilterForm((current) => ({ ...current, center }));
+  }, []);
+  const onKeywordChange = useCallback((keywords: string[]) => {
+    setFilterForm((current) => ({ ...current, keywords }));
+  }, []);
+  const onKeywordMatchChange = useCallback((keywordMatch: KeywordMatch) => {
+    setFilterForm((current) => ({ ...current, keywordMatch }));
+  }, []);
+  const onClearFilters = useCallback(() => setFilterForm(EMPTY_FILTERS), []);
+
+  const getCardKey = useCallback((item: CardItem) => item.source.id, []);
+  const fetchCardsNext = useCallback(() => {
+    if (activeSearchId === null) {
+      fetchBrowseNext();
+    } else {
+      fetchResultsNext();
+    }
+  }, [activeSearchId, fetchBrowseNext, fetchResultsNext]);
+  const renderCard = useCallback(
+    (item: CardItem) => (
+      <ImageCard source={item.source} confidence={item.confidence} onOpen={setSelected} />
+    ),
+    [],
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100">
@@ -205,15 +254,15 @@ const Sources: React.FC = () => {
               center={filterForm.center}
               selectedKeywords={filterForm.keywords}
               keywordMatch={filterForm.keywordMatch}
-              centers={facets.data?.centers ?? []}
-              keywords={facets.data?.keywords ?? []}
+              centers={facetCenters}
+              keywords={facetKeywords}
               dateMin={facets.data?.date_min ?? null}
               dateMax={facets.data?.date_max ?? null}
-              onDateChange={(dateFrom, dateTo) => setFilterForm((current) => ({ ...current, dateFrom, dateTo }))}
-              onCenterChange={(center) => setFilterForm((current) => ({ ...current, center }))}
-              onKeywordChange={(keywords) => setFilterForm((current) => ({ ...current, keywords }))}
-              onKeywordMatchChange={(keywordMatch) => setFilterForm((current) => ({ ...current, keywordMatch }))}
-              onClear={() => setFilterForm(EMPTY_FILTERS)}
+              onDateChange={onDateChange}
+              onCenterChange={onCenterChange}
+              onKeywordChange={onKeywordChange}
+              onKeywordMatchChange={onKeywordMatchChange}
+              onClear={onClearFilters}
             />
           )}
         </div>
@@ -225,7 +274,7 @@ const Sources: React.FC = () => {
             type="button"
             className="absolute inset-0 z-20 bg-black/20 lg:hidden"
             aria-label="Close search history"
-            onClick={() => setHistoryOpen(false)}
+            onClick={closeHistory}
           />
         )}
         <aside
@@ -240,12 +289,8 @@ const Sources: React.FC = () => {
             <SearchHistory
               activeSearchId={activeSearchId}
               onSelect={openHistory}
-              onDeleted={(searchId) => {
-                if (activeSearchId === searchId) {
-                  showBrowseAll();
-                }
-              }}
-              onClose={() => setHistoryOpen(false)}
+              onDeleted={handleHistoryDeleted}
+              onClose={closeHistory}
             />
           </div>
         </aside>
@@ -261,13 +306,11 @@ const Sources: React.FC = () => {
           {activeRequest.isSuccess && (
             <VirtualGrid
               items={cards}
-              getKey={(item) => item.source.id}
+              getKey={getCardKey}
               resetKey={showBrowse ? browseKey : activeSearchId}
               hasNextPage={activeRequest.hasNextPage}
               isFetchingNextPage={activeRequest.isFetchingNextPage}
-              fetchNextPage={() => {
-                activeRequest.fetchNextPage();
-              }}
+              fetchNextPage={fetchCardsNext}
               empty={
                 showBrowse
                   ? Object.keys(appliedFilters).length > 0
@@ -280,13 +323,7 @@ const Sources: React.FC = () => {
                   ? "Loading more..."
                   : `Showing ${cards.length} of ${total}`
               }
-              renderItem={(item) => (
-                <ImageCard
-                  source={item.source}
-                  confidence={item.confidence}
-                  onOpen={() => setSelected(item.source)}
-                />
-              )}
+              renderItem={renderCard}
             />
           )}
         </main>
@@ -296,7 +333,7 @@ const Sources: React.FC = () => {
         <ImageDetail
           source={selected}
           onOpenSource={setSelected}
-          onClose={() => setSelected(null)}
+          onClose={closeDetail}
         />
       )}
     </div>
