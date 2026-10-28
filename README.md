@@ -226,6 +226,10 @@ docker compose exec db psql -U postgres -d space_explorer
 ---
 
 
+## Filtering
+
+The browse catalog can be narrowed by a date range, NASA center, and keyword. Dates are chosen on a calendar, and both ends are inclusive. Center is chosen from the centers in the collection. The keyword menu lists every keyword in the collection and loads the next page as you scroll, and a keyword matches only images that include that exact keyword. Clear filters resets the row. Filters do not change search results, similar images, or saved history. The list stays paged, and the total is the number of images that match.
+
 ## Cool Feature: Similar images
 
 1. **Feature name**: Similar images
@@ -237,7 +241,7 @@ docker compose exec db psql -U postgres -d space_explorer
 
 ![Gale Crater detail with similar images](docs/similar-images.png)
 
-Search itself is the same scorer. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
+Search itself is the same scorer. The field sits on the left of the browse filters and runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
 
 ## Deliverables
 
