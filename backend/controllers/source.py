@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from controllers.filters import SourceFilters, get_source_filters
 from controllers.paging import PageParams
 from db import get_db
-from models import Page, ScoredSource, Source
+from models import Page, ScoredSource, Source, SourceFacets
 from repositories.source import SourceRepository
 from services.scoring import search_sources, similar_query, slice_page
 
@@ -18,11 +19,27 @@ def get_repository(session: AsyncSession = Depends(get_db)) -> SourceRepository:
 @router.get("", response_model=Page[Source])
 async def get_sources(
     page: PageParams = Depends(),
+    filters: SourceFilters = Depends(get_source_filters),
     repository: SourceRepository = Depends(get_repository),
 ) -> Page[Source]:
     """Get one page of NASA image sources."""
-    items, total = await repository.get_page(page.limit, page.offset)
+    items, total = await repository.get_page(
+        page.limit,
+        page.offset,
+        date_from=filters.date_from,
+        date_to=filters.date_to,
+        center=filters.center,
+        keyword=filters.keyword,
+    )
     return Page(items=items, total=total, limit=page.limit, offset=page.offset)
+
+
+@router.get("/facets", response_model=SourceFacets)
+async def get_source_facets(
+    repository: SourceRepository = Depends(get_repository),
+) -> SourceFacets:
+    """Centers and year bounds for the browse filters."""
+    return await repository.get_facets()
 
 
 @router.get("/{source_id}/similar", response_model=Page[ScoredSource])

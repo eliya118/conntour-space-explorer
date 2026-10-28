@@ -64,6 +64,7 @@ async def seed_database():
                 name=data.get("title", f"NASA Item {idx}"),
                 type=data.get("media_type", "unknown"),
                 launch_date=data.get("date_created", ""),
+                center=data.get("center") or "",
                 description=data.get("description", ""),
                 image_url=image_url,
                 status="Active",

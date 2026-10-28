@@ -15,6 +15,7 @@ class Source(BaseModel):
     name: str
     type: str
     launch_date: str
+    center: str = ""
     description: str = ""
     image_url: Optional[str] = None
     status: str
@@ -29,6 +30,15 @@ class Source(BaseModel):
         if isinstance(value, str):
             return [value]
         return [str(item) for item in value]
+
+
+class SourceFacets(BaseModel):
+    """Centers, keywords, and date bounds for the browse filters."""
+
+    centers: list[str]
+    keywords: list[str]
+    date_min: Optional[str] = None
+    date_max: Optional[str] = None
 
 
 class Page(BaseModel, Generic[T]):

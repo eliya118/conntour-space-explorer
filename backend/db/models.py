@@ -13,6 +13,7 @@ class SourceModel(Base):
     name = Column(Text, nullable=False)
     type = Column(String(100), nullable=False)
     launch_date = Column(String(100), nullable=False)
+    center = Column(String(50), nullable=False, default="")
     description = Column(Text, nullable=True)
     image_url = Column(Text, nullable=True)
     status = Column(String(50), nullable=False, default="Active")
