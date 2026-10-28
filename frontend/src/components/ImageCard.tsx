@@ -48,18 +48,27 @@ const ImageCard: React.FC<ImageCardProps> = ({ source, confidence, onOpen }) => 
         {(source.center || dateLabel) && (
           <p className="mb-4 text-sm text-gray-500">{[source.center, dateLabel].filter(Boolean).join(" · ")}</p>
         )}
-        <div className="mt-auto flex flex-wrap gap-2">
-          <span className="inline-block rounded bg-blue-500 px-4 py-2 text-white">Details</span>
+        <div className="mt-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex h-7 items-center rounded-md bg-gray-900 px-2.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-gray-700"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen();
+            }}
+          >
+            Details
+          </button>
           {source.image_url && (
             <button
               type="button"
-              className="inline-block rounded border border-blue-500 px-4 py-2 text-blue-600 hover:bg-blue-50"
+              className="inline-flex h-7 items-center rounded-md border border-gray-300 bg-white px-2.5 text-xs font-medium text-gray-800 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50"
               onClick={(event) => {
                 event.stopPropagation();
                 setFullImageOpen(true);
               }}
             >
-              View Full Image
+              View full image
             </button>
           )}
         </div>
