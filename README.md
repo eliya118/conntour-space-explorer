@@ -63,10 +63,13 @@ space-explorer/
 │   ├── db/                   # Database layer
 │   │   ├── models.py         # SQLAlchemy ORM models
 │   │   └── session.py        # Database session management
+│   ├── alembic/                # Versioned schema migrations
+│   │   ├── env.py            # Upgrade lock and async engine
+│   │   └── versions/         # Schema revisions
 │   ├── repositories/         # Data access layer
 │   │   ├── base.py           # Generic Repository interface
-│   │   ├── search.py         # Saved searches and stored scores
-│   │   └── source.py         # PostgreSQL catalog queries
+│   │   ├── search.py         # Saved search queries
+│   │   └── source.py         # PostgreSQL catalog and ranked search
 │   ├── services/             # Search ranking
 │   │   └── scoring.py        # Keyword-overlap confidence
 │   ├── scripts/              # Utility scripts
@@ -254,6 +257,18 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 ![Gale Crater detail with similar images](docs/similar-images.png)
 
 Search itself is the same scorer. The field sits to the right of the history button and to the left of the browse filters, and it runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
+
+A saved search stores the query and the time it was created. Opening it again runs that query against the current catalog, so the matches and the total can change after images are reseeded. The history list does not keep a copy of the old result set. PostgreSQL ranks one page at a time: token arrays on each image are filtered with GIN indexes, scored with the same title, keyword, and description weights, and ordered by confidence, name, and id. Full-text search is not used, because stemming and `ts_rank` would change which tokens match and what the confidence is.
+
+## Search performance
+
+Measured with `EXPLAIN (ANALYZE, BUFFERS)` on 20,000 synthetic images, before and after moving ranking into PostgreSQL. The seeded NASA catalog is 100 images. The larger set is only for the measurement.
+
+Before, search loaded the whole catalog and scored it in Python. The database scan was an index scan on the primary key: planning 0.299 ms, execution 2.253 ms, 20,000 rows returned to the client. Fetching and validating those rows took 145.5 ms. Scoring then took 30.1 ms for a selective word (200 matches) and 37.3 ms for a broad word (16,000 matches). End to end, those searches were 175.6 ms and 182.8 ms, and Python held every image.
+
+After, a page of 24 is computed in SQL. A selective word (200 of 20,000 rows, about 1%) uses the three GIN indexes. The plan is a bitmap OR of index scans, a heap scan of those 200 candidates, and a top-N heapsort. Nothing is removed by a later filter. Planning was 0.307 ms and execution 0.417 ms. The count of matches was 0.131 ms. The request returned 24 rows to Python in 4.3 ms, with a total of 200.
+
+A broad word (16,000 of 20,000 rows) does not use the GIN indexes. The planner sequential-scans, removes 4,000 non-matches, and top-N heapsorts the remaining 16,000 so it can return 24. Planning was 0.025 ms and execution 12.059 ms. The count scan was 4.774 ms. The request still returned only 24 rows to Python, in 16.8 ms, with a total of 16,000. Forcing the indexes would not remove that work: every image that contains the token has to be scored to keep the current weights and order. That scoring and sorting step is the remaining bottleneck. Scores are not cached.
 
 ## Deliverables
 
