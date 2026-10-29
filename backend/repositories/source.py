@@ -67,12 +67,12 @@ class SourceRepository(Repository[Source]):
                 if name and name not in seen:
                     seen.add(name)
                     counts[name] += 1
-        earliest = await self._session.scalar(
-            select(func.min(SourceModel.launch_date)).where(SourceModel.launch_date != "")
+        bounds = await self._session.execute(
+            select(func.min(SourceModel.launch_date), func.max(SourceModel.launch_date)).where(
+                SourceModel.launch_date != ""
+            )
         )
-        latest = await self._session.scalar(
-            select(func.max(SourceModel.launch_date)).where(SourceModel.launch_date != "")
-        )
+        earliest, latest = bounds.one()
         keywords = [
             name for name, _count in sorted(counts.items(), key=lambda item: (-item[1], item[0].lower()))
         ]

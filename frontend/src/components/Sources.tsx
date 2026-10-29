@@ -98,6 +98,9 @@ const Sources: React.FC = () => {
       setNotice(null);
     },
     onError: (error, failedQuery) => {
+      if (failedQuery !== queryRef.current.trim()) {
+        return;
+      }
       submittedRef.current = failedQuery;
       setActiveSearchId(null);
       setActiveQuery(null);
@@ -210,32 +213,26 @@ const Sources: React.FC = () => {
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100">
       <header className="shrink-0 border-b bg-white px-4 py-4">
-        <div className="flex items-start gap-3">
-          <Tooltip
-            label={historyOpen ? "Close search history" : "Open search history"}
-            side="bottom-start"
-            className="relative mt-1 inline-flex"
-          >
-            <button
-              type="button"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:border-gray-300"
-              aria-expanded={historyOpen}
-              aria-controls="search-history"
-              aria-label={historyOpen ? "Close search history" : "Open search history"}
-              onClick={() => setHistoryOpen((open) => !open)}
-            >
-              <HistoryIcon style={{ fontSize: 22 }} />
-            </button>
-          </Tooltip>
-          <div>
-            <h1 className="text-3xl font-bold">NASA Space Images</h1>
-            <p className="text-sm text-gray-500">
-              {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">NASA Space Images</h1>
+          <p className="text-sm text-gray-500">
+            {showBrowse ? "Browse the collection" : `Results for “${activeQuery ?? ""}”`}
+          </p>
         </div>
         {notice && <p className="mt-3 text-sm text-red-600">{notice}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className={`inline-flex h-9 items-center gap-2 rounded-full border bg-white px-3 text-sm text-gray-700 hover:border-gray-300 ${
+              historyOpen ? "border-gray-900" : "border-gray-200"
+            }`}
+            aria-expanded={historyOpen}
+            aria-controls="search-history"
+            onClick={() => setHistoryOpen((open) => !open)}
+          >
+            <HistoryIcon style={{ fontSize: 18 }} />
+            {historyOpen ? "Close Search History" : "Open Search History"}
+          </button>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}

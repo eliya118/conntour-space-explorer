@@ -24,17 +24,18 @@ class SearchRepository:
         self._session.add(search)
         await self._session.flush()
 
-        for position, (source, confidence) in enumerate(ranked):
-            self._session.add(
+        self._session.add_all(
+            [
                 SearchResultModel(
                     search_id=search.id,
                     source_id=source.id,
                     confidence=confidence,
                     position=position,
                 )
-            )
+                for position, (source, confidence) in enumerate(ranked)
+            ]
+        )
         await self._session.commit()
-        await self._session.refresh(search)
 
         page = [
             ScoredSource(source=source, confidence=confidence)
@@ -46,7 +47,10 @@ class SearchRepository:
         total = await self._session.scalar(select(func.count()).select_from(SearchModel))
         result_count = (
             select(func.count(SearchResultModel.id))
+            .select_from(SearchResultModel)
+            .join(SourceModel, SourceModel.id == SearchResultModel.source_id)
             .where(SearchResultModel.search_id == SearchModel.id)
+            .correlate(SearchModel)
             .scalar_subquery()
         )
         result = await self._session.execute(
@@ -75,6 +79,7 @@ class SearchRepository:
         total = await self._session.scalar(
             select(func.count())
             .select_from(SearchResultModel)
+            .join(SourceModel, SourceModel.id == SearchResultModel.source_id)
             .where(SearchResultModel.search_id == search_id)
         )
         result = await self._session.execute(

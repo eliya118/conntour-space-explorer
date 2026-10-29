@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { Source } from "../types";
@@ -77,6 +77,11 @@ const FullImageModal: React.FC<FullImageModalProps> = ({ source, onClose }) => {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const endDrag = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => endDrag.current?.();
+  }, []);
 
   const changeZoom = (nextZoom: number) => {
     const clamped = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
@@ -124,6 +129,7 @@ const FullImageModal: React.FC<FullImageModalProps> = ({ source, onClose }) => {
     const startX = event.clientX;
     const startY = event.clientY;
     const startPan = pan;
+    endDrag.current?.();
     setIsPanning(true);
     viewport.setPointerCapture(event.pointerId);
 
@@ -135,13 +141,19 @@ const FullImageModal: React.FC<FullImageModalProps> = ({ source, onClose }) => {
         y: clamp(startPan.y + moveEvent.clientY - startY, -maxY, maxY),
       });
     };
-    const onUp = () => {
+    const stop = () => {
       setIsPanning(false);
       viewport.removeEventListener("pointermove", onMove);
-      viewport.removeEventListener("pointerup", onUp);
+      viewport.removeEventListener("pointerup", stop);
+      viewport.removeEventListener("pointercancel", stop);
+      if (endDrag.current === stop) {
+        endDrag.current = null;
+      }
     };
+    endDrag.current = stop;
     viewport.addEventListener("pointermove", onMove);
-    viewport.addEventListener("pointerup", onUp);
+    viewport.addEventListener("pointerup", stop);
+    viewport.addEventListener("pointercancel", stop);
   };
 
   const startResize = (event: React.PointerEvent<HTMLButtonElement>, edges: Edges) => {
@@ -159,6 +171,7 @@ const FullImageModal: React.FC<FullImageModalProps> = ({ source, onClose }) => {
     const startHeight = rect.height;
     const startLeft = rect.left;
     const startTop = rect.top;
+    endDrag.current?.();
     setOrigin({ top: startTop, left: startLeft });
 
     const onMove = (moveEvent: PointerEvent) => {
@@ -187,12 +200,18 @@ const FullImageModal: React.FC<FullImageModalProps> = ({ source, onClose }) => {
       setSize({ width, height });
       setOrigin({ top, left });
     };
-    const onUp = () => {
+    const stop = () => {
       window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+      if (endDrag.current === stop) {
+        endDrag.current = null;
+      }
     };
+    endDrag.current = stop;
     window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
   };
 
   return createPortal(
