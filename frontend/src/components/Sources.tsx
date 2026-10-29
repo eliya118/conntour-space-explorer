@@ -243,7 +243,7 @@ const Sources: React.FC = () => {
             aria-label="Search images"
             className="h-9 w-56 rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900"
           />
-          {showBrowse && (
+          {showBrowse ? (
             <BrowseFilters
               dateFrom={filterForm.dateFrom}
               dateTo={filterForm.dateTo}
@@ -260,6 +260,17 @@ const Sources: React.FC = () => {
               onKeywordMatchChange={onKeywordMatchChange}
               onClear={onClearFilters}
             />
+          ) : (
+            <button
+              type="button"
+              className="inline-flex h-9 items-center rounded-full border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:border-gray-300"
+              onClick={() => {
+                onClearFilters();
+                showBrowseAll();
+              }}
+            >
+              Clear filters
+            </button>
           )}
         </div>
       </header>
