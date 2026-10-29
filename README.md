@@ -43,7 +43,7 @@ Build a small web application that allows users to explore and search a set of i
 ## Tech Stack
 
 - **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL
-- **Frontend**: React + TypeScript + Tailwind CSS
+- **Frontend**: React + TypeScript + Tailwind CSS + React Query
 - **Infrastructure**: Docker Compose, Nginx, uv (Python package manager)
 
 ## Project Structure
@@ -56,15 +56,22 @@ space-explorer/
 │   ├── pyproject.toml        # Python dependencies (uv)
 │   ├── Dockerfile            # Backend Docker image
 │   ├── controllers/          # HTTP routing layer
-│   │   └── source.py         # Source routes (APIRouter)
+│   │   ├── filters.py        # Browse filter query params
+│   │   ├── paging.py         # Shared page limit and offset
+│   │   ├── search.py         # Search history routes
+│   │   └── source.py         # Catalog, facets, and similar images
 │   ├── db/                   # Database layer
 │   │   ├── models.py         # SQLAlchemy ORM models
 │   │   └── session.py        # Database session management
 │   ├── repositories/         # Data access layer
 │   │   ├── base.py           # Generic Repository interface
-│   │   └── source.py         # PostgreSQL implementation
+│   │   ├── search.py         # Saved searches and stored scores
+│   │   └── source.py         # PostgreSQL catalog queries
+│   ├── services/             # Search ranking
+│   │   └── scoring.py        # Keyword-overlap confidence
 │   ├── scripts/              # Utility scripts
 │   │   └── seed_db.py        # Database seeding from mock data
+│   ├── tests/                # Filter, paging, scoring, and search tests
 │   └── data/                 # Mock data
 │       └── mock_data.json    # NASA images seed data
 ├── frontend/                 # React frontend
@@ -204,6 +211,11 @@ docker compose exec db psql -U postgres -d space_explorer
    The backend will run on http://localhost:5001
    - API docs available at http://localhost:5001/docs
 
+6. Run the backend tests:
+   ```bash
+   uv run pytest
+   ```
+
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
@@ -241,7 +253,7 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 
 ![Gale Crater detail with similar images](docs/similar-images.png)
 
-Search itself is the same scorer. The field sits on the left of the browse filters and runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
+Search itself is the same scorer. The field sits to the right of the history button and to the left of the browse filters, and it runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
 
 ## Deliverables
 
