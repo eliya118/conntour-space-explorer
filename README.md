@@ -42,7 +42,7 @@ Build a small web application that allows users to explore and search a set of i
 
 ## Tech Stack
 
-- **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL
+- **Backend**: FastAPI + SQLAlchemy (async) + PostgreSQL + Alembic
 - **Frontend**: React + TypeScript + Tailwind CSS + React Query
 - **Infrastructure**: Docker Compose, Nginx, uv (Python package manager)
 
@@ -54,6 +54,7 @@ space-explorer/
 │   ├── app.py                # App setup, middleware, router registration
 │   ├── models.py             # Pydantic domain models
 │   ├── pyproject.toml        # Python dependencies (uv)
+│   ├── alembic.ini           # Migration configuration
 │   ├── Dockerfile            # Backend Docker image
 │   ├── controllers/          # HTTP routing layer
 │   │   ├── filters.py        # Browse filter query params
@@ -63,7 +64,7 @@ space-explorer/
 │   ├── db/                   # Database layer
 │   │   ├── models.py         # SQLAlchemy ORM models
 │   │   └── session.py        # Database session management
-│   ├── alembic/                # Versioned schema migrations
+│   ├── alembic/              # Versioned schema migrations
 │   │   ├── env.py            # Upgrade lock and async engine
 │   │   └── versions/         # Schema revisions
 │   ├── repositories/         # Data access layer
@@ -110,9 +111,11 @@ docker compose up --build
 ```
 
 This will:
-- Start PostgreSQL database (seeded with NASA images from `mock_data.json`)
-- Build and start the FastAPI backend on http://localhost:5001
+- Start PostgreSQL (seeded with NASA images from `mock_data.json`)
+- Apply Alembic migrations when the backend starts, then serve the API on http://localhost:5001
 - Build and start the React frontend (served via Nginx) on http://localhost:3001
+
+Seeding replaces the image catalog and keeps saved searches. The catalog stores a token array for each image's title, keywords, and description. Those arrays are what search filters.
 
 The frontend will proxy API requests to the backend automatically.
 
@@ -201,12 +204,12 @@ docker compose exec db psql -U postgres -d space_explorer
    uv sync
    ```
 
-4. Seed the database:
+4. Seed the image catalog. This recreates `sources` and leaves `searches` in place:
    ```bash
    uv run python scripts/seed_db.py
    ```
 
-5. Run the server:
+5. Run the server. Startup applies the Alembic migrations:
    ```bash
    uv run uvicorn app:app --reload --port 5001
    ```
@@ -214,7 +217,7 @@ docker compose exec db psql -U postgres -d space_explorer
    The backend will run on http://localhost:5001
    - API docs available at http://localhost:5001/docs
 
-6. Run the backend tests:
+6. Run the backend tests. The ranking tests need PostgreSQL at `DATABASE_URL`:
    ```bash
    uv run pytest
    ```
@@ -238,6 +241,11 @@ docker compose exec db psql -U postgres -d space_explorer
 
    The frontend will run on http://localhost:3001
 
+4. Run the frontend tests:
+   ```bash
+   CI=true npm test -- --watchAll=false
+   ```
+
 ---
 
 
@@ -249,7 +257,7 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 
 1. **Feature name**: Similar images
 2. **Why this feature**: A search gets you into the collection, but the next interesting image is often one that shares a mission, place, or instrument. Opening an image and seeing related ones, each with a confidence score, lets someone explore without writing another query.
-3. **Implementation details**: Similar images use the same keyword-overlap scorer as search. The query is the open image's title plus its NASA keywords. Each other image earns points when a token appears in its title (weight 3), keywords (weight 2), or description (weight 1). Confidence is those points divided by the maximum title score, so a full title match is 1. The image itself is excluded, and the result is not written to search history. The detail panel shows metadata (`nasa_id`, type, status, date, description, keywords) above a paged, virtualized list of similar images, so only the visible rows are rendered and the next page loads as you reach the end.
+3. **Implementation details**: Similar images use the same keyword-overlap scorer and the same PostgreSQL page query as search. The query is the open image's title plus its NASA keywords. Each other image earns points when a token appears in its title (weight 3), keywords (weight 2), or description (weight 1). Confidence is those points divided by the maximum title score, so a full title match is 1. The image itself is excluded, and the result is not written to search history. The detail panel shows metadata (`nasa_id`, type, status, date, description, keywords) above a paged, virtualized list of similar images, so only the visible rows are rendered and the next page loads as you reach the end.
 4. **Demo**: Search for images of Mars rovers. The query sits beside Clear filters, and each result shows a match percentage. Open Gale Crater to list similar Mars images in the detail panel.
 
 ![Search results for images of Mars rovers](docs/search-mars.png)
@@ -259,6 +267,8 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 Search itself is the same scorer. The field sits to the right of the history button and to the left of the browse filters, and it runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
 
 A saved search stores the query and the time it was created. Opening it again runs that query against the current catalog, so the matches and the total can change after images are reseeded. The history list does not keep a copy of the old result set. PostgreSQL ranks one page at a time: token arrays on each image are filtered with GIN indexes, scored with the same title, keyword, and description weights, and ordered by confidence, name, and id. Full-text search is not used, because stemming and `ts_rank` would change which tokens match and what the confidence is.
+
+Migration `0001_search_query_only` adds those token columns and drops `search_results`. That table held derived scores. The query and creation time in `searches` are kept. Startup takes an advisory lock for the upgrade, so two backend processes cannot apply it at once.
 
 ## Search performance
 
