@@ -1,3 +1,4 @@
+import CloseIcon from "@mui/icons-material/Close";
 import React, { memo, useCallback, useEffect, useMemo } from "react";
 
 import { errorMessage, fetchSimilar } from "../api/client";
@@ -6,6 +7,7 @@ import { usePagedQuery } from "../api/usePagedQuery";
 import { formatDate } from "../lib/format";
 import { ScoredSource, Source } from "../types";
 import ImageCard from "./ImageCard";
+import Tooltip from "./Tooltip";
 import VirtualGrid from "./VirtualGrid";
 
 interface ImageDetailProps {
@@ -61,13 +63,19 @@ const ImageDetail = memo(function ImageDetail({ source, onOpenSource, onClose }:
             <h2 className="text-2xl font-semibold">{source.name}</h2>
             {source.nasa_id && <p className="text-sm text-gray-500">NASA ID {source.nasa_id}</p>}
           </div>
-          <button
-            type="button"
-            className="rounded border px-3 py-1 text-sm hover:bg-gray-100"
-            onClick={onClose}
-          >
-            Close
-          </button>
+          <Tooltip label="Close" side="bottom">
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              aria-label="Close"
+              onClick={(event) => {
+                event.currentTarget.blur();
+                onClose();
+              }}
+            >
+              <CloseIcon style={{ fontSize: 20 }} />
+            </button>
+          </Tooltip>
         </div>
 
         <div className="max-h-[40%] shrink-0 overflow-auto px-4 py-4">
