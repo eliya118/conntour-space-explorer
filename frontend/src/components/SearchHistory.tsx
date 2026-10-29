@@ -5,6 +5,7 @@ import { deleteSearch, errorMessage, fetchSearches } from "../api/client";
 import { queryKeys } from "../api/queryKeys";
 import { usePagedQuery } from "../api/usePagedQuery";
 import { SearchSummary } from "../types";
+import Tooltip from "./Tooltip";
 import VirtualGrid from "./VirtualGrid";
 
 interface SearchHistoryProps {
@@ -82,16 +83,21 @@ const SearchHistory = memo(function SearchHistory({
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-3">
         <h2 className="text-lg font-semibold">Search history</h2>
-        <button
-          type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-          aria-label="Close search history"
-          onClick={onClose}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M12 5 7 10l5 5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+        <Tooltip label="Close search history" side="bottom">
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            aria-label="Close search history"
+            onClick={(event) => {
+              event.currentTarget.blur();
+              onClose();
+            }}
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 5 7 10l5 5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
       {history.isLoading && (
         <div className="flex flex-1 items-center justify-center">

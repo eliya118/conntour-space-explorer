@@ -1,3 +1,4 @@
+import HistoryIcon from "@mui/icons-material/History";
 import { InfiniteData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -9,6 +10,7 @@ import BrowseFilters from "./BrowseFilters";
 import ImageCard from "./ImageCard";
 import ImageDetail from "./ImageDetail";
 import SearchHistory from "./SearchHistory";
+import Tooltip from "./Tooltip";
 import VirtualGrid from "./VirtualGrid";
 
 interface CardItem {
@@ -164,6 +166,7 @@ const Sources: React.FC = () => {
   }, []);
 
   const closeHistory = useCallback(() => setHistoryOpen(false), []);
+  const openHistoryPanel = useCallback(() => setHistoryOpen(true), []);
   const closeDetail = useCallback(() => setSelected(null), []);
 
   const handleHistoryDeleted = useCallback(
@@ -208,29 +211,22 @@ const Sources: React.FC = () => {
     <div className="flex h-screen flex-col overflow-hidden bg-gray-100">
       <header className="shrink-0 border-b bg-white px-4 py-4">
         <div className="flex items-start gap-3">
-          <div className="relative mt-1">
+          <Tooltip
+            label={historyOpen ? "Close search history" : "Open search history"}
+            side="bottom-start"
+            className="relative mt-1 inline-flex"
+          >
             <button
               type="button"
-              className="peer inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:border-gray-300"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 text-gray-700 hover:border-gray-300"
               aria-expanded={historyOpen}
               aria-controls="search-history"
-              aria-describedby="search-history-tip"
               aria-label={historyOpen ? "Close search history" : "Open search history"}
               onClick={() => setHistoryOpen((open) => !open)}
             >
-              <svg viewBox="0 0 20 20" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="3.5" width="14" height="13" rx="1.5" />
-                <path d="M8 3.5v13" />
-              </svg>
+              <HistoryIcon style={{ fontSize: 22 }} />
             </button>
-            <span
-              id="search-history-tip"
-              role="tooltip"
-              className="pointer-events-none absolute left-0 top-full z-40 mt-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity peer-hover:opacity-100 peer-focus-visible:opacity-100"
-            >
-              {historyOpen ? "Close search history" : "Open search history"}
-            </span>
-          </div>
+          </Tooltip>
           <div>
             <h1 className="text-3xl font-bold">NASA Space Images</h1>
             <p className="text-sm text-gray-500">
@@ -269,6 +265,20 @@ const Sources: React.FC = () => {
       </header>
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {!historyOpen && (
+          <Tooltip label="Open search history" side="right" className="flex h-full">
+            <button
+              type="button"
+              className="flex h-full w-16 shrink-0 items-center justify-center border-r border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              aria-label="Open search history"
+              aria-controls="search-history"
+              aria-expanded={false}
+              onClick={openHistoryPanel}
+            >
+              <HistoryIcon style={{ fontSize: 24 }} />
+            </button>
+          </Tooltip>
+        )}
         {historyOpen && (
           <button
             type="button"
