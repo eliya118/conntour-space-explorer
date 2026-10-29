@@ -56,7 +56,7 @@ const SearchHistory = memo(function SearchHistory({
           <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onSelect(item)}>
             <span className="block truncate font-medium">{item.query}</span>
             <span className="block text-xs text-gray-500">
-              {item.result_count} results · {new Date(item.created_at).toLocaleString()}
+              {new Date(item.created_at).toLocaleString()}
             </span>
           </button>
           <button

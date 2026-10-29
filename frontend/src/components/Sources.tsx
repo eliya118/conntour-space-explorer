@@ -160,13 +160,17 @@ const Sources: React.FC = () => {
     setNotice(null);
   }, []);
 
-  const openHistory = useCallback((item: SearchSummary) => {
-    submittedRef.current = item.query;
-    setActiveSearchId(item.id);
-    setActiveQuery(item.query);
-    setQuery(item.query);
-    setNotice(null);
-  }, []);
+  const openHistory = useCallback(
+    (item: SearchSummary) => {
+      submittedRef.current = item.query;
+      void queryClient.invalidateQueries({ queryKey: queryKeys.searchResults(item.id) });
+      setActiveSearchId(item.id);
+      setActiveQuery(item.query);
+      setQuery(item.query);
+      setNotice(null);
+    },
+    [queryClient],
+  );
 
   const closeHistory = useCallback(() => setHistoryOpen(false), []);
   const openHistoryPanel = useCallback(() => setHistoryOpen(true), []);

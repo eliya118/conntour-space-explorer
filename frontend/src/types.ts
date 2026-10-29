@@ -44,7 +44,6 @@ export interface SearchSummary {
   id: number;
   query: string;
   created_at: string;
-  result_count: number;
 }
 
 export interface SearchResults {
