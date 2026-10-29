@@ -235,7 +235,7 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 1. **Feature name**: Similar images
 2. **Why this feature**: A search gets you into the collection, but the next interesting image is often one that shares a mission, place, or instrument. Opening an image and seeing related ones, each with a confidence score, lets someone explore without writing another query.
 3. **Implementation details**: Similar images use the same keyword-overlap scorer as search. The query is the open image's title plus its NASA keywords. Each other image earns points when a token appears in its title (weight 3), keywords (weight 2), or description (weight 1). Confidence is those points divided by the maximum title score, so a full title match is 1. The image itself is excluded, and the result is not written to search history. The detail panel shows metadata (`nasa_id`, type, status, date, description, keywords) above a paged, virtualized list of similar images, so only the visible rows are rendered and the next page loads as you reach the end.
-4. **Demo**: Open any image card, then scroll the Similar images list in the panel. A Mars image surfaces other Mars images with a match percentage.
+4. **Demo**: Search for images of Mars rovers. The query sits beside Clear filters, and each result shows a match percentage. Open Gale Crater to list similar Mars images in the detail panel.
 
 ![Search results for images of Mars rovers](docs/search-mars.png)
 
