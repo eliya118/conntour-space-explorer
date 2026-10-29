@@ -95,3 +95,19 @@ def slice_page(items: Sequence[T], limit: int, offset: int) -> tuple[list[T], in
     if offset < 0:
         raise ValueError("offset out of bounds")
     return list(items[offset : offset + limit]), len(items)
+
+
+def field_tokens(
+    name: str,
+    keywords: Sequence[str],
+    description: str,
+) -> tuple[list[str], list[str], list[str]]:
+    """Token lists stored for SQL membership. The sets match score_source."""
+    keyword_tokens: list[str] = []
+    seen: set[str] = set()
+    for keyword in keywords:
+        for token in tokenize(keyword):
+            if token not in seen:
+                seen.add(token)
+                keyword_tokens.append(token)
+    return tokenize(name), keyword_tokens, tokenize(description or "")

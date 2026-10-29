@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.models import SourceModel
 from db.session import AsyncSessionLocal, engine
+from services.scoring import field_tokens
 
 
 def _recreate_sources(connection) -> None:
@@ -58,18 +59,25 @@ async def seed_database():
                 image_url = link.get("href")
                 break
 
+        name = data.get("title", f"NASA Item {idx}")
+        keywords = _keywords(data.get("keywords"))
+        description = data.get("description") or ""
+        title_tokens, keyword_tokens, description_tokens = field_tokens(name, keywords, description)
         sources.append(
             SourceModel(
                 id=idx,
-                name=data.get("title", f"NASA Item {idx}"),
+                name=name,
                 type=data.get("media_type", "unknown"),
                 launch_date=data.get("date_created", ""),
                 center=data.get("center") or "",
-                description=data.get("description", ""),
+                description=description,
                 image_url=image_url,
                 status="Active",
-                keywords=_keywords(data.get("keywords")),
+                keywords=keywords,
                 nasa_id=data.get("nasa_id"),
+                title_tokens=title_tokens,
+                keyword_tokens=keyword_tokens,
+                description_tokens=description_tokens,
             )
         )
 

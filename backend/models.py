@@ -65,11 +65,10 @@ class SearchSummary(BaseModel):
     id: int
     query: str
     created_at: datetime
-    result_count: int
 
 
 class SearchResults(BaseModel):
-    """A saved search and one page of its stored matches."""
+    """A saved search and one page of matches from the current catalog."""
 
     id: int
     query: str

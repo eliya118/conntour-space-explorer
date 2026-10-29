@@ -6,7 +6,7 @@ from controllers.paging import PageParams
 from db import get_db
 from models import Page, ScoredSource, Source, SourceFacets
 from repositories.source import SourceRepository
-from services.scoring import search_sources, similar_query, slice_page
+from services.scoring import similar_query, tokenize
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
 
@@ -54,15 +54,10 @@ async def get_similar_sources(
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    ranked = search_sources(
-        await repository.get_all(),
-        similar_query(source),
+    items, total = await repository.search_page(
+        tokenize(similar_query(source)),
+        page.limit,
+        page.offset,
         exclude_id=source.id,
     )
-    items, total = slice_page(ranked, page.limit, page.offset)
-    return Page(
-        items=[ScoredSource(source=item, confidence=confidence) for item, confidence in items],
-        total=total,
-        limit=page.limit,
-        offset=page.offset,
-    )
+    return Page(items=items, total=total, limit=page.limit, offset=page.offset)

@@ -6,7 +6,7 @@ from db import get_db
 from models import Page, SearchRequest, SearchResults, SearchSummary
 from repositories.search import SearchRepository
 from repositories.source import SourceRepository
-from services.scoring import search_sources, tokenize
+from services.scoring import tokenize
 
 router = APIRouter(prefix="/api/searches", tags=["searches"])
 
@@ -26,12 +26,13 @@ async def create_search(
     searches: SearchRepository = Depends(get_search_repository),
     sources: SourceRepository = Depends(get_source_repository),
 ) -> SearchResults:
-    """Score every image, store the search, and return the first page of matches."""
-    if not tokenize(body.query):
+    """Store the query, score the current catalog in the database, and return one page."""
+    tokens = tokenize(body.query)
+    if not tokens:
         raise HTTPException(status_code=400, detail="Query has no searchable terms")
 
-    ranked = search_sources(await sources.get_all(), body.query)
-    search, items, total = await searches.create(body.query, ranked, page.limit, page.offset)
+    search = await searches.create(body.query)
+    items, total = await sources.search_page(tokens, page.limit, page.offset)
     return SearchResults(
         id=search.id,
         query=search.query,
@@ -58,12 +59,13 @@ async def get_search(
     search_id: int,
     page: PageParams = Depends(),
     searches: SearchRepository = Depends(get_search_repository),
+    sources: SourceRepository = Depends(get_source_repository),
 ) -> SearchResults:
-    """One page of a saved search, using stored scores."""
+    """Rerun a saved query against the current catalog. Does not insert a history row."""
     search = await searches.get(search_id)
     if search is None:
         raise HTTPException(status_code=404, detail="Search not found")
-    items, total = await searches.get_results(search_id, page.limit, page.offset)
+    items, total = await sources.search_page(tokenize(search.query), page.limit, page.offset)
     return SearchResults(
         id=search.id,
         query=search.query,

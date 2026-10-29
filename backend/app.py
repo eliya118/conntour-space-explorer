@@ -1,17 +1,27 @@
+import asyncio
+import os
 from contextlib import asynccontextmanager
 
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from controllers import search_router, source_router
-from db import Base, engine
+
+
+def _upgrade_database() -> None:
+    """Apply versioned migrations. env.py holds the advisory lock."""
+    root = os.path.dirname(__file__)
+    config = Config(os.path.join(root, "alembic.ini"))
+    config.set_main_option("script_location", os.path.join(root, "alembic"))
+    command.upgrade(config, "head")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan handler - creates tables on startup."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Apply database migrations before serving requests."""
+    await asyncio.to_thread(_upgrade_database)
     yield
 
 
