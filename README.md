@@ -260,9 +260,15 @@ The browse catalog can be narrowed by a date range, NASA center, and keyword. Da
 3. **Implementation details**: Similar images use the same keyword-overlap scorer and the same PostgreSQL page query as search. The query is the open image's title plus its NASA keywords. Each other image earns points when a token appears in its title (weight 3), keywords (weight 2), or description (weight 1). Confidence is those points divided by the maximum title score, so a full title match is 1. The image itself is excluded, and the result is not written to search history. The detail panel shows metadata (`nasa_id`, type, status, date, description, keywords) above a paged, virtualized list of similar images, so only the visible rows are rendered and the next page loads as you reach the end.
 4. **Demo**: Search for images of Mars rovers. The query sits beside Clear filters, and each result shows a match percentage. Open Gale Crater to list similar Mars images in the detail panel.
 
-![Search results for images of Mars rovers](docs/search-mars.png)
 
-![Gale Crater detail with similar images](docs/similar-images.png)
+
+https://github.com/user-attachments/assets/aeab2f97-8be4-462f-8259-7daf4cf3f05d
+
+
+<img width="1596" height="1222" alt="Screenshot 2026-10-29 at 11 04 08" src="https://github.com/user-attachments/assets/a488b9c2-7017-49ef-b31e-8df64ec12721" />
+<img width="1588" height="1226" alt="Screenshot 2026-10-29 at 11 04 24" src="https://github.com/user-attachments/assets/8767d753-5fa0-4c5a-8b37-ec13af2c803d" />
+
+
 
 Search itself is the same scorer. The field sits to the right of the history button and to the left of the browse filters, and it runs after the query reaches three characters. Queries such as "images of Mars rovers" ignore stopwords (`images`, `of`, `the`, `photo`) and rank the remaining words. Empty or stopword-only queries are rejected and do not create a history row.
 
